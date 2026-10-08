@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Poison Candy - The Witch's Duel</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            witch: {
+              950: '#0c0217',
+              900: '#140428',
+              800: '#1e083c',
+              700: '#2f0f5e',
+              600: '#4c1d95',
+              500: '#7928ca',
+              400: '#a855f7',
+              accent: '#06ffa5',
+              gold: '#fbbf24',
+              poison: '#ef4444'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* System font stack for 100% reliable rendering behind school firewalls */
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      background: radial-gradient(circle at 50% 15%, #250b44 0%, #120224 60%, #06000d 100%);
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+    }
+
+    /* 3D Flip Card Styles */
+    .perspective-800 {
+      perspective: 800px;
+    }
+    .card-inner {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+      transform-style: preserve-3d;
+    }
+    .card-flipped {
+      transform: rotateY(180deg);
+    }
+    .card-face {
+      position: absolute;
+      inset: 0;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      border-radius: 0.65rem;
+    }
+    .card-back {
+      transform: rotateY(180deg);
+    }
+
+    /* Subtle glow highlights */
+    .glow-cyan {
+      box-shadow: 0 0 16px rgba(6, 182, 212, 0.45);
+    }
+    .glow-amber {
+      box-shadow: 0 0 16px rgba(245, 158, 11, 0.45);
+    }
+    .glow-poison {
+      box-shadow: 0 0 25px rgba(239, 68, 68, 0.8), inset 0 0 12px rgba(239, 68, 68, 0.4);
+    }
+
+    /* Glass shatter screen shake animation */
+    @keyframes shatterShake {
+      0% { transform: translate(0, 0) rotate(0deg); }
+      15% { transform: translate(-8px, 6px) rotate(-2deg); }
+      30% { transform: translate(8px, -6px) rotate(2deg); }
+      45% { transform: translate(-6px, -4px) rotate(-1.5deg); }
+      60% { transform: translate(6px, 4px) rotate(1.5deg); }
+      75% { transform: translate(-3px, 2px) rotate(-0.5deg); }
+      100% { transform: translate(0, 0) rotate(0deg); }
+    }
+    .shatter-shake {
+      animation: shatterShake 0.65s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+    }
+
+    /* Hide scrollbars for single-viewport fit */
+    ::-webkit-scrollbar {
+      display: none;
+    }
+  </style>
+</head>
+
+<body class="h-screen w-screen overflow-hidden text-slate-100 flex flex-col justify-between p-2 sm:p-3 select-none">
+
+  <!-- Top Header Navigation & Controls -->
+  <header class="w-full max-w-4xl mx-auto flex items-center justify-between gap-2 bg-witch-900/90 border border-purple-800/50 px-3 py-2 rounded-xl shadow-lg shrink-0">
+    <div class="flex items-center space-x-2">
+      <div class="w-8 h-8 rounded-lg bg-purple-600/30 flex items-center justify-center border border-purple-500/40 text-base shadow-inner">
+        🧪
+      </div>
+      <div>
+        <h1 class="text-sm sm:text-base font-black tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-purple-200 via-pink-300 to-witch-accent">
+          Poison Candy <span class="text-xs font-medium text-purple-300 ml-1">The Witch's Duel</span>
+        </h1>
+      </div>
+    </div>
+
+    <!-- Controls Toolbar -->
+    <div class="flex items-center space-x-1.5 sm:space-x-2">
+      <!-- Lesson 1 & Lesson 2 Toggle Buttons -->
+      <div class="flex items-center bg-witch-800/90 rounded-lg p-0.5 border border-purple-600/40">
+        <button id="lesson1Btn" onclick="switchLesson(1)" class="px-2 sm:px-2.5 py-1 rounded-md text-xs font-bold transition bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-sm" title="Switch to Lesson 1">
+          L1
+        </button>
+        <button id="lesson2Btn" onclick="switchLesson(2)" class="px-2 sm:px-2.5 py-1 rounded-md text-xs font-bold transition text-purple-300 hover:text-white" title="Switch to Lesson 2">
+          L2
+        </button>
+      </div>
+
+      <!-- BGM Toggle Button -->
+      <button id="bgmBtn" onclick="toggleBGM()" class="px-2.5 py-1 rounded-lg bg-witch-800 hover:bg-witch-700 border border-purple-600/40 text-xs font-semibold flex items-center gap-1 transition text-purple-200" title="Toggle Mysterious BGM">
+        <span id="bgmIcon">🎵</span>
+        <span id="bgmText" class="hidden sm:inline">BGM: Off</span>
+      </button>
+
+      <!-- Custom Vocab Button -->
+      <button onclick="openVocabModal()" class="px-2.5 py-1 rounded-lg bg-witch-800 hover:bg-witch-700 border border-purple-600/40 text-xs font-semibold flex items-center gap-1 transition text-cyan-300" title="Customize Words">
+        <span>✏️</span>
+        <span class="hidden sm:inline">Words</span>
+      </button>
+
+      <!-- Rules Guide Modal Button -->
+      <button onclick="openRulesModal()" class="px-2.5 py-1 rounded-lg bg-witch-800 hover:bg-witch-700 border border-purple-600/40 text-xs font-semibold flex items-center gap-1 transition text-purple-300">
+        <span>📜</span>
+        <span class="hidden sm:inline">Rules</span>
+      </button>
+
+      <!-- Restart Game Button -->
+      <button onclick="initGame()" class="px-2.5 py-1 rounded-lg bg-rose-950/80 hover:bg-rose-900 border border-rose-600/50 text-xs font-semibold text-rose-200 transition flex items-center gap-1">
+        <span>🔄</span>
+        <span class="hidden sm:inline">Reset</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Player Turn Status Bar -->
+  <section class="w-full max-w-4xl mx-auto grid grid-cols-2 gap-2 my-1 shrink-0">
+    <!-- Player 1 Status Card -->
+    <div id="p1Card" class="px-3 py-1.5 rounded-lg border border-cyan-500/40 bg-witch-900/80 flex items-center justify-between transition-all duration-200">
+      <div class="flex items-center space-x-2">
+        <div class="w-6 h-6 rounded-full bg-cyan-500/20 text-cyan-300 font-black text-xs flex items-center justify-center border border-cyan-400/50">
+          P1
+        </div>
+        <div>
+          <div class="text-xs font-bold text-cyan-300 leading-tight">Player 1</div>
+          <div id="p1Status" class="text-[11px] text-slate-300">Choosing poison...</div>
+        </div>
+      </div>
+      <div id="p1Indicator" class="text-sm">⏳</div>
+    </div>
+
+    <!-- Player 2 Status Card -->
+    <div id="p2Card" class="px-3 py-1.5 rounded-lg border border-purple-500/30 bg-witch-900/50 opacity-60 flex items-center justify-between transition-all duration-200">
+      <div class="flex items-center space-x-2">
+        <div class="w-6 h-6 rounded-full bg-amber-500/20 text-amber-300 font-black text-xs flex items-center justify-center border border-amber-400/50">
+          P2
+        </div>
+        <div>
+          <div class="text-xs font-bold text-amber-300 leading-tight">Player 2</div>
+          <div id="p2Status" class="text-[11px] text-slate-400">Waiting...</div>
+        </div>
+      </div>
+      <div id="p2Indicator" class="text-sm">🙈</div>
+    </div>
+  </section>
+
+  <!-- Instructional Prompt Strip -->
+  <div id="instructionBanner" class="w-full max-w-4xl mx-auto py-1 px-3 bg-purple-950/70 border border-purple-700/50 rounded-lg text-center shrink-0">
+    <span id="bannerText" class="text-xs sm:text-sm font-bold text-witch-accent">
+      Step 1: Player 1, secretly click any card to designate your Poison Candy!
+    </span>
+  </div>
+
+  <!-- 4x4 Rectangular Card Grid Container (Engineered to fit single screen without overflow) -->
+  <main class="w-full max-w-4xl mx-auto flex-1 flex items-center justify-center min-h-0 py-1">
+    <div id="gridContainer" class="grid grid-cols-4 gap-1.5 sm:gap-2.5 w-full h-full max-h-[70vh] aspect-[4/3] max-w-2xl p-2 bg-witch-900/60 border border-purple-800/40 rounded-xl shadow-2xl backdrop-blur-sm">
+      <!-- 16 Rectangular Cards injected dynamically via JS -->
+    </div>
+  </main>
+
+  <!-- Footer with sound status hint -->
+  <footer class="w-full text-center text-[11px] text-purple-400/60 py-0.5 shrink-0">
+    <span>Poison Candy Duel • Say the meaning before flipping • Safe for school Wi-Fi</span>
+  </footer>
+
+  <!-- Rules Modal (English) -->
+  <div id="rulesModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 z-50 hidden opacity-0 transition-opacity duration-200">
+    <div class="bg-witch-900 border border-purple-500/60 max-w-md w-full rounded-2xl p-5 shadow-2xl text-slate-200">
+      <div class="flex justify-between items-center pb-2.5 border-b border-purple-700/50">
+        <h3 class="text-base font-black text-witch-accent flex items-center gap-2">
+          <span>📜</span> How to Play
+        </h3>
+        <button onclick="closeRulesModal()" class="w-7 h-7 rounded-lg bg-purple-950 hover:bg-purple-900 flex items-center justify-center text-purple-300 font-bold">✕</button>
+      </div>
+
+      <div class="my-3 space-y-2.5 text-xs sm:text-sm leading-relaxed text-purple-100">
+        <div class="bg-purple-950/70 p-2.5 rounded-xl border border-purple-700/40">
+          <p class="font-bold text-cyan-300">1. Secret Poison Setup:</p>
+          <p class="text-purple-200/90 mt-0.5">Player 1 secretly selects 1 card as their poison (Player 2 looks away). Then, Player 2 secretly selects 1 card as their poison (Player 1 looks away).</p>
+        </div>
+        <div class="bg-purple-950/70 p-2.5 rounded-xl border border-purple-700/40">
+          <p class="font-bold text-amber-300">2. The Duel & Meaning Challenge:</p>
+          <p class="text-purple-200/90 mt-0.5">Take turns picking a card. Before clicking to flip, say its English meaning out loud based on the Chinese & Pinyin on the front! Click to reveal the English back.</p>
+        </div>
+        <div class="bg-purple-950/70 p-2.5 rounded-xl border border-purple-700/40">
+          <p class="font-bold text-rose-400">3. Shatter & Game Over:</p>
+          <p class="text-purple-200/90 mt-0.5">If anyone flips either poison card, a bottle shatter sound plays, the screen shakes, and that player gets poisoned and loses immediately!</p>
+        </div>
+      </div>
+
+      <div class="pt-1">
+        <button onclick="closeRulesModal()" class="w-full py-2 rounded-xl bg-purple-600 hover:bg-purple-500 font-bold text-white text-xs sm:text-sm shadow-lg transition">
+          Got It, Let's Play!
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Custom Vocabulary Editor Modal -->
+  <div id="vocabModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 z-50 hidden opacity-0 transition-opacity duration-200">
+    <div class="bg-witch-900 border border-purple-500/60 max-w-lg w-full rounded-2xl p-4 shadow-2xl text-slate-200 flex flex-col max-h-[90vh]">
+      <div class="flex justify-between items-center pb-2 border-b border-purple-700/50 shrink-0">
+        <h3 class="text-sm sm:text-base font-black text-cyan-300 flex items-center gap-1.5">
+          <span>✏️</span> Custom Vocabulary (16 Words)
+        </h3>
+        <button onclick="closeVocabModal()" class="w-7 h-7 rounded-lg bg-purple-950 hover:bg-purple-900 flex items-center justify-center text-purple-300 font-bold">✕</button>
+      </div>
+
+      <p class="text-xs text-purple-300/80 my-2 shrink-0">
+        Edit Chinese, Pinyin, and English below. Exactly 16 cards are used in the 4×4 grid.
+      </p>
+
+      <!-- Scrollable Editor Area -->
+      <div id="vocabInputsList" class="flex-1 overflow-y-auto space-y-1.5 pr-1 max-h-[50vh]">
+        <!-- Injected by JS -->
+      </div>
+
+      <div class="pt-3 flex gap-2 border-t border-purple-700/50 mt-2 shrink-0">
+        <button onclick="resetDefaultVocab()" class="px-3 py-2 rounded-xl bg-witch-800 hover:bg-witch-700 text-xs font-semibold text-purple-200">
+          Reset Default
+        </button>
+        <button onclick="saveCustomVocab()" class="flex-1 py-2 rounded-xl bg-gradient-to-r from-cyan-600 to-teal-500 hover:from-cyan-500 hover:to-teal-400 font-bold text-white text-xs sm:text-sm shadow-md transition">
+          Apply & Restart Game
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Game Over Modal -->
+  <div id="gameOverModal" class="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center p-3 z-50 hidden opacity-0 transition-opacity duration-300">
+    <div id="shatterBox" class="bg-gradient-to-b from-witch-900 to-witch-950 border-2 border-rose-500/80 max-w-sm sm:max-w-md w-full rounded-2xl p-5 shadow-2xl text-center relative overflow-hidden glow-poison">
+      <div class="text-5xl mb-2 animate-bounce">🧪💥☠️</div>
+      <h2 class="text-2xl font-black text-rose-400 tracking-wider mb-1">
+        GAME OVER
+      </h2>
+      <p class="text-xs font-medium text-rose-200 mb-3">
+        The poisonous potion bottle has shattered!
+      </p>
+
+      <div id="winnerStatement" class="bg-rose-950/70 border border-rose-700/60 p-3 rounded-xl mb-3 text-sm font-bold text-witch-accent">
+        <!-- Result text -->
+      </div>
+
+      <div class="p-2.5 bg-witch-900/80 rounded-xl mb-4 border border-purple-800/40 text-xs text-purple-200">
+        <p class="text-purple-400 text-[11px] mb-1">The triggered poison word was:</p>
+        <div id="poisonWordRevealed" class="text-lg font-black text-amber-300"></div>
+      </div>
+
+      <button onclick="initGame()" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 font-black text-white text-sm shadow-lg transition active:scale-95">
+        Play Again
+      </button>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-purple-900/95 text-white px-4 py-2 rounded-full border border-purple-500 text-xs font-bold shadow-2xl pointer-events-none transition-all duration-300 opacity-0 transform translate-y-3 z-50">
+    Message
+  </div>
+
+  <script>
+    /**
+     * Lesson 1: 16 Words (Moving, Transportation & Furniture)
+     */
+    const LESSON_1 = [
+      { cn: "搬家",   pinyin: "bān jiā",       en: "To move house" },
+      { cn: "楼",     pinyin: "lóu",           en: "Building / Floor" },
+      { cn: "欢迎",   pinyin: "huān yíng",     en: "Welcome" },
+      { cn: "地铁",   pinyin: "dì tiě",        en: "Subway / Metro" },
+      { cn: "自行车", pinyin: "zì xíng chē",   en: "Bicycle" },
+      { cn: "近",     pinyin: "jìn",           en: "Near / Close" },
+      { cn: "叔叔",   pinyin: "shū shu",       en: "Uncle" },
+      { cn: "礼物",   pinyin: "lǐ wù",         en: "Gift / Present" },
+      { cn: "参观",   pinyin: "cān guān",      en: "To visit / Tour" },
+      { cn: "沙发",   pinyin: "shā fā",        en: "Sofa" },
+      { cn: "椅子",   pinyin: "yǐ zi",         en: "Chair" },
+      { cn: "桌子",   pinyin: "zhuō zi",       en: "Table / Desk" },
+      { cn: "可爱",   pinyin: "kě ài",         en: "Cute / Lovely" },
+      { cn: "照片",   pinyin: "zhào piàn",     en: "Photo / Picture" },
+      { cn: "小时候", pinyin: "xiǎo shí hou",  en: "In childhood / When young" },
+      { cn: "离",     pinyin: "lí",            en: "Away from / From" }
+    ];
+
+    /**
+     * Lesson 2: 16 Words (Housework, Daily Routines & Living)
+     */
+    const LESSON_2 = [
+      { cn: "做家务", pinyin: "zuò jiā wù",    en: "Do housework" },
+      { cn: "做饭",   pinyin: "zuò fàn",       en: "Cook / Make a meal" },
+      { cn: "洗衣机", pinyin: "xǐ yī jī",      en: "Washing machine" },
+      { cn: "毛巾",   pinyin: "máo jīn",       en: "Towel" },
+      { cn: "脏衣服", pinyin: "zāng yī fu",    en: "Dirty clothes" },
+      { cn: "鞋子",   pinyin: "xié zi",        en: "Shoes" },
+      { cn: "放",     pinyin: "fàng",          en: "Put / Place" },
+      { cn: "轮流",   pinyin: "lún liú",       en: "Take turns" },
+      { cn: "很忙",   pinyin: "hěn máng",      en: "Very busy" },
+      { cn: "漂亮",   pinyin: "piào liang",    en: "Pretty / Beautiful" },
+      { cn: "干净",   pinyin: "gān jìng",      en: "Clean" },
+      { cn: "舒服",   pinyin: "shū fu",        en: "Comfortable" },
+      { cn: "通常",   pinyin: "tōng cháng",    en: "Usually / Normally" },
+      { cn: "打扫",   pinyin: "dǎ sǎo",        en: "Clean / Sweep" },
+      { cn: "房间",   pinyin: "fáng jiān",     en: "Room" },
+      { cn: "能干",   pinyin: "néng gàn",      en: "Capable / Competent" }
+    ];
+
+    let currentLessonNum = 1;
+    let currentVocabList = JSON.parse(JSON.stringify(LESSON_1));
+
+    const STAGE = {
+      P1_CHOOSE: 'P1_CHOOSE',
+      P2_CHOOSE: 'P2_CHOOSE',
+      PLAYING: 'PLAYING',
+      GAME_OVER: 'GAME_OVER'
+    };
+
+    let gameState = {
+      stage: STAGE.P1_CHOOSE,
+      p1PoisonIndex: null,
+      p2PoisonIndex: null,
+      activePlayer: 1,
+      flippedCards: new Set(),
+      boardCards: []
+    };
+
+    /* ----------------------------------------------------
+       Web Audio API Sound Engine (100% Firewall-Safe)
+       ---------------------------------------------------- */
+    let audioCtx = null;
+    let bgmTimer = null;
+    let bgmDroneOsc = null;
+    let bgmDroneGain = null;
+    let isBgmPlaying = false;
+
+    function getAudioContext() {
+      if (!audioCtx) {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        audioCtx = new AudioContextClass();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      return audioCtx;
+    }
+
+    /**
+     * Card Flip Sound (Crisp, subtle card turn)
+     */
+    function playCardFlipSound() {
+      try {
+        const ctx = getAudioContext();
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(320, now);
+        osc.frequency.exponentialRampToValueAtTime(750, now + 0.09);
+
+        gain.gain.setValueAtTime(0.18, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + 0.1);
+      } catch (e) {}
+    }
+
+    /**
+     * Secret Poison Selection Confirmation Sound
+     */
+    function playPoisonSelectSound() {
+      try {
+        const ctx = getAudioContext();
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(260, now);
+        osc.frequency.setValueAtTime(440, now + 0.06);
+        osc.frequency.setValueAtTime(660, now + 0.12);
+
+        gain.gain.setValueAtTime(0.15, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + 0.26);
+      } catch (e) {}
+    }
+
+    /**
+     * Realistic Glass Bottle Shatter & Burst Sound Effect
+     */
+    function playGlassShatterSound() {
+      try {
+        const ctx = getAudioContext();
+        const now = ctx.currentTime;
+
+        // 1. White noise burst for glass shattering blast
+        const bufferSize = ctx.sampleRate * 0.7;
+        const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+        const output = noiseBuffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          output[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.14));
+        }
+
+        const whiteNoise = ctx.createBufferSource();
+        whiteNoise.buffer = noiseBuffer;
+
+        const filter = ctx.createBiquadFilter();
+        filter.type = "highpass";
+        filter.frequency.setValueAtTime(1600, now);
+        filter.frequency.exponentialRampToValueAtTime(4000, now + 0.25);
+
+        const noiseGain = ctx.createGain();
+        noiseGain.gain.setValueAtTime(0.85, now);
+        noiseGain.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
+
+        whiteNoise.connect(filter);
+        filter.connect(noiseGain);
+        noiseGain.connect(ctx.destination);
+        whiteNoise.start(now);
+
+        // 2. High frequency shards ringing
+        const shardFreqs = [2400, 3100, 3900, 4800, 1900];
+        shardFreqs.forEach((freq, idx) => {
+          const osc = ctx.createOscillator();
+          const oscGain = ctx.createGain();
+          const delay = now + idx * 0.035;
+
+          osc.type = "triangle";
+          osc.frequency.setValueAtTime(freq, delay);
+          osc.frequency.exponentialRampToValueAtTime(freq * 0.65, delay + 0.22);
+
+          oscGain.gain.setValueAtTime(0.25, delay);
+          oscGain.gain.exponentialRampToValueAtTime(0.001, delay + 0.22);
+
+          osc.connect(oscGain);
+          oscGain.connect(ctx.destination);
+
+          osc.start(delay);
+          osc.stop(delay + 0.23);
+        });
+
+        // 3. Low explosion thud
+        const thud = ctx.createOscillator();
+        const thudGain = ctx.createGain();
+        thud.type = "sine";
+        thud.frequency.setValueAtTime(150, now);
+        thud.frequency.exponentialRampToValueAtTime(35, now + 0.35);
+
+        thudGain.gain.setValueAtTime(0.7, now);
+        thudGain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+
+        thud.connect(thudGain);
+        thudGain.connect(ctx.destination);
+
+        thud.start(now);
+        thud.stop(now + 0.36);
+      } catch (e) {
+        console.warn("Audio Context playback error:", e);
+      }
+    }
+
+    /**
+     * Mysterious Procedural Witch Ambient BGM
+     * Creates a slow low drone + random eerie minor chimes via pure Web Audio
+     */
+    function startBGM() {
+      try {
+        const ctx = getAudioContext();
+        if (isBgmPlaying) return;
+        isBgmPlaying = true;
+
+        // Continuous atmospheric sub-drone
+        bgmDroneOsc = ctx.createOscillator();
+        bgmDroneGain = ctx.createGain();
+        bgmDroneOsc.type = "sine";
+        bgmDroneOsc.frequency.setValueAtTime(65.41, ctx.currentTime); // Low C2
+
+        bgmDroneGain.gain.setValueAtTime(0.01, ctx.currentTime);
+        bgmDroneGain.gain.linearRampToValueAtTime(0.08, ctx.currentTime + 3);
+
+        bgmDroneOsc.connect(bgmDroneGain);
+        bgmDroneGain.connect(ctx.destination);
+        bgmDroneOsc.start();
+
+        // Eerie notes pool (Mystic Pentatonic: C, D#, F, G, A#)
+        const notes = [130.81, 155.56, 174.61, 196.00, 233.08, 261.63, 311.13, 392.00, 466.16];
+
+        function playEerieChime() {
+          if (!isBgmPlaying) return;
+          try {
+            const now = ctx.currentTime;
+            const note = notes[Math.floor(Math.random() * notes.length)];
+            const osc = ctx.createOscillator();
+            const noteGain = ctx.createGain();
+
+            osc.type = "sine";
+            osc.frequency.setValueAtTime(note, now);
+
+            // Gentle soft attack and slow mystical decay
+            noteGain.gain.setValueAtTime(0.001, now);
+            noteGain.gain.linearRampToValueAtTime(0.05, now + 0.4);
+            noteGain.gain.exponentialRampToValueAtTime(0.0001, now + 2.8);
+
+            osc.connect(noteGain);
+            noteGain.connect(ctx.destination);
+
+            osc.start(now);
+            osc.stop(now + 2.9);
+          } catch (e) {}
+
+          const nextInterval = 1200 + Math.random() * 1600;
+          bgmTimer = setTimeout(playEerieChime, nextInterval);
+        }
+
+        playEerieChime();
+        updateBgmUI(true);
+      } catch (e) {
+        console.warn("BGM start error:", e);
+      }
+    }
+
+    function stopBGM() {
+      isBgmPlaying = false;
+      if (bgmTimer) {
+        clearTimeout(bgmTimer);
+        bgmTimer = null;
+      }
+      if (bgmDroneGain && audioCtx) {
+        try {
+          bgmDroneGain.gain.linearRampToValueAtTime(0.0001, audioCtx.currentTime + 0.5);
+          setTimeout(() => {
+            if (bgmDroneOsc) {
+              bgmDroneOsc.stop();
+              bgmDroneOsc.disconnect();
+              bgmDroneOsc = null;
+            }
+          }, 600);
+        } catch (e) {}
+      }
+      updateBgmUI(false);
+    }
+
+    function toggleBGM() {
+      if (isBgmPlaying) {
+        stopBGM();
+        showToast("Mysterious BGM Paused");
+      } else {
+        startBGM();
+        showToast("Mysterious BGM Playing 🎵");
+      }
+    }
+
+    function updateBgmUI(active) {
+      const text = document.getElementById('bgmText');
+      const btn = document.getElementById('bgmBtn');
+      if (active) {
+        text.textContent = 'BGM: On';
+        btn.classList.add('border-emerald-500', 'text-emerald-300');
+        btn.classList.remove('border-purple-600/40', 'text-purple-200');
+      } else {
+        text.textContent = 'BGM: Off';
+        btn.classList.remove('border-emerald-500', 'text-emerald-300');
+        btn.classList.add('border-purple-600/40', 'text-purple-200');
+      }
+    }
+
+    /* ----------------------------------------------------
+       Game Initialization & Grid Rendering
+       ---------------------------------------------------- */
+    function shuffle(arr) {
+      const copy = [...arr];
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
+
+    function initGame() {
+      closeRulesModal();
+      closeVocabModal();
+
+      document.getElementById('gameOverModal').classList.add('hidden', 'opacity-0');
+
+      gameState.stage = STAGE.P1_CHOOSE;
+      gameState.p1PoisonIndex = null;
+      gameState.p2PoisonIndex = null;
+      gameState.activePlayer = 1;
+      gameState.flippedCards.clear();
+
+      // Ensure 16 cards from current vocabulary
+      let list = [...currentVocabList];
+      while (list.length < 16) {
+        list.push({ cn: `词${list.length + 1}`, pinyin: `cí`, en: `Word ${list.length + 1}` });
+      }
+      list = list.slice(0, 16);
+      gameState.boardCards = shuffle(list);
+
+      updatePlayerTurnUI();
+      renderGrid();
+    }
+
+    function renderGrid() {
+      const container = document.getElementById('gridContainer');
+      container.innerHTML = '';
+
+      gameState.boardCards.forEach((item, index) => {
+        const cardWrapper = document.createElement('div');
+        // Rectangular 4x4 card ratio
+        cardWrapper.className = 'perspective-800 w-full h-full cursor-pointer';
+        cardWrapper.setAttribute('data-index', index);
+        cardWrapper.onclick = () => handleCardClick(index);
+
+        const isFlipped = gameState.flippedCards.has(index);
+
+        const cardInner = document.createElement('div');
+        cardInner.className = `card-inner ${isFlipped ? 'card-flipped' : ''}`;
+        cardInner.id = `card-inner-${index}`;
+
+        // Front Face: Pinyin + Chinese Character (Clear & Prominent)
+        const frontFace = document.createElement('div');
+        frontFace.className = 'card-face card-front bg-gradient-to-b from-witch-800 to-witch-900 border border-purple-500/40 hover:border-witch-accent flex flex-col justify-center items-center p-1 sm:p-2 shadow-md transition-transform hover:scale-[1.02] text-center';
+
+        frontFace.innerHTML = `
+          <div class="text-[10px] sm:text-xs text-cyan-300 font-semibold tracking-wider mb-0.5 sm:mb-1 opacity-90">${item.pinyin}</div>
+          <div class="text-base sm:text-2xl font-black text-white tracking-wide">${item.cn}</div>
+        `;
+
+        // Back Face: English Meaning (Clean & Centered)
+        const backFace = document.createElement('div');
+        backFace.className = 'card-face card-back bg-gradient-to-b from-purple-950 to-indigo-950 border border-emerald-400/60 flex flex-col justify-center items-center p-1 sm:p-2 shadow-inner text-center';
+
+        backFace.innerHTML = `
+          <div class="text-[9px] uppercase tracking-wider text-emerald-400 font-bold mb-0.5">Meaning</div>
+          <div class="text-xs sm:text-sm font-bold text-slate-100 leading-snug px-1">${item.en}</div>
+          <div class="text-[10px] text-purple-300/80 mt-1 font-medium">${item.cn}</div>
+        `;
+
+        cardInner.appendChild(frontFace);
+        cardInner.appendChild(backFace);
+        cardWrapper.appendChild(cardInner);
+        container.appendChild(cardWrapper);
+      });
+    }
+
+    /* ----------------------------------------------------
+       Turn & Game Interaction Logic
+       ---------------------------------------------------- */
+    function handleCardClick(index) {
+      const card = gameState.boardCards[index];
+
+      // Stage 1: Player 1 Secret Poison Pick
+      if (gameState.stage === STAGE.P1_CHOOSE) {
+        gameState.p1PoisonIndex = index;
+        playPoisonSelectSound();
+        showToast(`Player 1 secretly primed card #${index + 1} with poison! 🧪`);
+        gameState.stage = STAGE.P2_CHOOSE;
+        updatePlayerTurnUI();
+        return;
+      }
+
+      // Stage 2: Player 2 Secret Poison Pick
+      if (gameState.stage === STAGE.P2_CHOOSE) {
+        if (index === gameState.p1PoisonIndex) {
+          showToast(`⚠️ Card already has an incantation! Choose a different card.`);
+          return;
+        }
+        gameState.p2PoisonIndex = index;
+        playPoisonSelectSound();
+        showToast(`Player 2 has chosen their poison! The duel begins! ⚔️`);
+        gameState.stage = STAGE.PLAYING;
+        gameState.activePlayer = 1;
+        updatePlayerTurnUI();
+        return;
+      }
+
+      // Stage 3: Playing Phase
+      if (gameState.stage === STAGE.PLAYING) {
+        // If already flipped, ignore
+        if (gameState.flippedCards.has(index)) {
+          return;
+        }
+
+        // Flip card visual & play crisp card flip sound
+        flipCardVisual(index);
+
+        // Check if poison triggered
+        const isP1Poison = (index === gameState.p1PoisonIndex);
+        const isP2Poison = (index === gameState.p2PoisonIndex);
+
+        if (isP1Poison || isP2Poison) {
+          handlePoisonHit(index, isP1Poison, isP2Poison);
+          return;
+        }
+
+        playCardFlipSound();
+
+        // Switch active player
+        gameState.activePlayer = (gameState.activePlayer === 1) ? 2 : 1;
+        updatePlayerTurnUI();
+      }
+    }
+
+    function flipCardVisual(index) {
+      gameState.flippedCards.add(index);
+      const inner = document.getElementById(`card-inner-${index}`);
+      if (inner) {
+        inner.classList.add('card-flipped');
+      }
+    }
+
+    function handlePoisonHit(index, isP1Poison, isP2Poison) {
+      gameState.stage = STAGE.GAME_OVER;
+
+      // 1. Play realistic glass shatter
+      playGlassShatterSound();
+
+      // 2. Shake screen grid
+      const mainGrid = document.getElementById('gridContainer');
+      mainGrid.classList.add('shatter-shake');
+      setTimeout(() => mainGrid.classList.remove('shatter-shake'), 650);
+
+      // 3. Mark clicked back face as shattered poison
+      const inner = document.getElementById(`card-inner-${index}`);
+      const backFace = inner ? inner.querySelector('.card-back') : null;
+      if (backFace) {
+        backFace.className = 'card-face card-back bg-gradient-to-b from-rose-900 to-red-950 border-2 border-rose-500 flex flex-col justify-center items-center p-1 sm:p-2 glow-poison text-white';
+        backFace.innerHTML = `
+          <div class="text-[10px] font-black text-rose-300">POISON! ☠️</div>
+          <div class="text-sm sm:text-base font-black text-rose-100 my-0.5">${gameState.boardCards[index].cn}</div>
+          <div class="text-[10px] text-rose-300">${gameState.boardCards[index].en}</div>
+        `;
+      }
+
+      const poisonedPlayer = gameState.activePlayer;
+      const winnerPlayer = (poisonedPlayer === 1) ? 2 : 1;
+      const cardObj = gameState.boardCards[index];
+
+      setTimeout(() => {
+        const gameOverModal = document.getElementById('gameOverModal');
+        const winnerStatement = document.getElementById('winnerStatement');
+        const poisonWordRevealed = document.getElementById('poisonWordRevealed');
+        const shatterBox = document.getElementById('shatterBox');
+
+        shatterBox.classList.add('shatter-shake');
+
+        let note = '';
+        if (isP1Poison) {
+          note = `Player ${poisonedPlayer} triggered Player 1's secret poison!`;
+        } else {
+          note = `Player ${poisonedPlayer} triggered Player 2's secret poison!`;
+        }
+
+        winnerStatement.innerHTML = `
+          <div class="text-rose-400 text-sm mb-1">Player ${poisonedPlayer} was Poisoned!</div>
+          <div class="text-base sm:text-lg text-witch-accent font-black">🎉 Player ${winnerPlayer} Wins!</div>
+          <div class="text-[11px] text-purple-200 mt-1 font-normal">${note}</div>
+        `;
+
+        poisonWordRevealed.innerHTML = `
+          <span>${cardObj.cn}</span>
+          <span class="text-xs text-cyan-300 ml-1">(${cardObj.pinyin})</span>
+          <div class="text-xs text-slate-200 mt-0.5 font-medium">${cardObj.en}</div>
+        `;
+
+        gameOverModal.classList.remove('hidden');
+        requestAnimationFrame(() => gameOverModal.classList.remove('opacity-0'));
+      }, 500);
+    }
+
+    function updatePlayerTurnUI() {
+      const p1Card = document.getElementById('p1Card');
+      const p2Card = document.getElementById('p2Card');
+      const p1Status = document.getElementById('p1Status');
+      const p2Status = document.getElementById('p2Status');
+      const p1Indicator = document.getElementById('p1Indicator');
+      const p2Indicator = document.getElementById('p2Indicator');
+      const bannerText = document.getElementById('bannerText');
+
+      if (gameState.stage === STAGE.P1_CHOOSE) {
+        p1Card.className = 'px-3 py-1.5 rounded-lg border-2 border-cyan-400 bg-witch-800 shadow-md glow-cyan transition-all';
+        p2Card.className = 'px-3 py-1.5 rounded-lg border border-purple-500/20 bg-witch-900/40 opacity-40 transition-all';
+        p1Status.innerHTML = '<span class="text-cyan-300 font-bold animate-pulse">Secretly picking poison...</span>';
+        p2Status.textContent = 'Please look away';
+        p1Indicator.textContent = '⏳';
+        p2Indicator.textContent = '🙈';
+        bannerText.textContent = 'Step 1: Player 1, click any card to designate your Poison Candy!';
+      } else if (gameState.stage === STAGE.P2_CHOOSE) {
+        p1Card.className = 'px-3 py-1.5 rounded-lg border border-purple-500/20 bg-witch-900/40 opacity-40 transition-all';
+        p2Card.className = 'px-3 py-1.5 rounded-lg border-2 border-amber-400 bg-witch-800 shadow-md glow-amber transition-all';
+        p1Status.innerHTML = '<span class="text-emerald-400 font-semibold">Poison Ready ✓</span>';
+        p2Status.innerHTML = '<span class="text-amber-300 font-bold animate-pulse">Secretly picking poison...</span>';
+        p1Indicator.textContent = '🔒';
+        p2Indicator.textContent = '⏳';
+        bannerText.textContent = 'Step 2: Player 2, click any card to designate your Poison Candy!';
+      } else if (gameState.stage === STAGE.PLAYING) {
+        p1Indicator.textContent = '🔒';
+        p2Indicator.textContent = '🔒';
+        if (gameState.activePlayer === 1) {
+          p1Card.className = 'px-3 py-1.5 rounded-lg border-2 border-cyan-400 bg-witch-800 shadow-lg glow-cyan transition-all';
+          p2Card.className = 'px-3 py-1.5 rounded-lg border border-purple-500/30 bg-witch-900/60 opacity-60 transition-all';
+          p1Status.innerHTML = '<span class="text-cyan-300 font-extrabold animate-pulse">👉 Turn to flip</span>';
+          p2Status.textContent = 'Waiting...';
+        } else {
+          p1Card.className = 'px-3 py-1.5 rounded-lg border border-purple-500/30 bg-witch-900/60 opacity-60 transition-all';
+          p2Card.className = 'px-3 py-1.5 rounded-lg border-2 border-amber-400 bg-witch-800 shadow-lg glow-amber transition-all';
+          p1Status.textContent = 'Waiting...';
+          p2Status.innerHTML = '<span class="text-amber-300 font-extrabold animate-pulse">👉 Turn to flip</span>';
+        }
+        bannerText.textContent = `Player ${gameState.activePlayer}'s Turn: Say the English meaning out loud before clicking!`;
+      }
+    }
+
+    /* ----------------------------------------------------
+       Custom Vocabulary Modal Handlers
+       ---------------------------------------------------- */
+    function openVocabModal() {
+      const container = document.getElementById('vocabInputsList');
+      container.innerHTML = '';
+
+      currentVocabList.forEach((item, i) => {
+        const row = document.createElement('div');
+        row.className = 'flex items-center gap-1.5 bg-purple-950/60 p-1.5 rounded-lg border border-purple-700/40 text-xs';
+        row.innerHTML = `
+          <span class="w-5 text-purple-400 font-mono text-[10px] text-right font-bold">${i + 1}.</span>
+          <input type="text" class="vocab-cn w-20 px-2 py-1 rounded bg-witch-950 border border-purple-600/50 text-white font-bold text-xs" value="${item.cn}" placeholder="中文">
+          <input type="text" class="vocab-py w-28 px-2 py-1 rounded bg-witch-950 border border-purple-600/50 text-cyan-300 text-xs" value="${item.pinyin}" placeholder="拼音">
+          <input type="text" class="vocab-en flex-1 px-2 py-1 rounded bg-witch-950 border border-purple-600/50 text-slate-200 text-xs" value="${item.en}" placeholder="English">
+        `;
+        container.appendChild(row);
+      });
+
+      const modal = document.getElementById('vocabModal');
+      modal.classList.remove('hidden');
+      requestAnimationFrame(() => modal.classList.remove('opacity-0'));
+    }
+
+    function closeVocabModal() {
+      const modal = document.getElementById('vocabModal');
+      modal.classList.add('opacity-0');
+      setTimeout(() => modal.classList.add('hidden'), 200);
+    }
+
+    function saveCustomVocab() {
+      const cnInputs = document.querySelectorAll('.vocab-cn');
+      const pyInputs = document.querySelectorAll('.vocab-py');
+      const enInputs = document.querySelectorAll('.vocab-en');
+
+      const newList = [];
+      for (let i = 0; i < cnInputs.length; i++) {
+        newList.push({
+          cn: cnInputs[i].value.trim() || `词${i + 1}`,
+          pinyin: pyInputs[i].value.trim() || 'cí',
+          en: enInputs[i].value.trim() || `Word ${i + 1}`
+        });
+      }
+
+      currentVocabList = newList;
+      closeVocabModal();
+      initGame();
+      showToast("Custom vocabulary applied! New round started.");
+    }
+
+    function resetDefaultVocab() {
+      currentVocabList = JSON.parse(JSON.stringify(currentLessonNum === 1 ? LESSON_1 : LESSON_2));
+      openVocabModal();
+      showToast(`Reset to default Lesson ${currentLessonNum} words.`);
+    }
+
+    /**
+     * Switch between Lesson 1 and Lesson 2 presets
+     */
+    function switchLesson(lessonNum) {
+      currentLessonNum = lessonNum;
+      currentVocabList = JSON.parse(JSON.stringify(lessonNum === 1 ? LESSON_1 : LESSON_2));
+
+      const btn1 = document.getElementById('lesson1Btn');
+      const btn2 = document.getElementById('lesson2Btn');
+
+      if (lessonNum === 1) {
+        btn1.className = 'px-2 sm:px-2.5 py-1 rounded-md text-xs font-bold transition bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-sm';
+        btn2.className = 'px-2 sm:px-2.5 py-1 rounded-md text-xs font-bold transition text-purple-300 hover:text-white';
+      } else {
+        btn2.className = 'px-2 sm:px-2.5 py-1 rounded-md text-xs font-bold transition bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-sm';
+        btn1.className = 'px-2 sm:px-2.5 py-1 rounded-md text-xs font-bold transition text-purple-300 hover:text-white';
+      }
+
+      initGame();
+      showToast(`Switched to Lesson ${lessonNum} (16 Words)! 📚`);
+    }
+
+    function openRulesModal() {
+      const modal = document.getElementById('rulesModal');
+      modal.classList.remove('hidden');
+      requestAnimationFrame(() => modal.classList.remove('opacity-0'));
+    }
+
+    function closeRulesModal() {
+      const modal = document.getElementById('rulesModal');
+      modal.classList.add('opacity-0');
+      setTimeout(() => modal.classList.add('hidden'), 200);
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.classList.remove('opacity-0', 'translate-y-3');
+      toast.classList.add('opacity-100', 'translate-y-0');
+
+      clearTimeout(window.__toastTimer);
+      window.__toastTimer = setTimeout(() => {
+        toast.classList.remove('opacity-100', 'translate-y-0');
+        toast.classList.add('opacity-0', 'translate-y-3');
+      }, 2000);
+    }
+
+    // Auto initialize on DOM ready
+    window.addEventListener('load', () => {
+      initGame();
+    });
+  </script>
+</body>
+</html>
